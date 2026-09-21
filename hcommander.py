@@ -23,7 +23,7 @@ class Histrionic(object):
 
     historyRE = re.compile(r"^[0-9]+\s+(.*)$")
     # q and Q deliberately omitted
-    keys = "0123456789abcdefghijklmnoprtstuvwxyzABCDEFGHIJKLMNOPRSTUVWXYZ"
+    keys = "0123456789abcdefghijklmnoprstuvwxyzABCDEFGHIJKLMNOPRSTUVWXYZ"
 
     def setHandlers(self):
         self._escape_handlers['6'] = self._onPageDown
@@ -54,26 +54,6 @@ class Histrionic(object):
             self._page_offset = 0
         return
 
-    def setHistoryProcess(self):
-        seencmnds = set()
-        self._history.clear()
-        with subprocess.Popen([os.environ['SHELL'], "-i"], stdin=subprocess.PIPE, stdout=subprocess.PIPE) as p:
-            p.stdin.write(b"history\n")
-            p.stdin.close()
-            data = p.stdout.read()
-            data = data.decode("utf-8")
-            strm = StringIO(data)
-            lines = reversed(strm.readlines())
-            for line in map(str.strip, lines):
-                m = self.historyRE.search(line)
-                if not m:
-                    continue
-                cmd = m.group(1)
-                if cmd in seencmnds:
-                    continue
-                seencmnds.add(cmd)
-                self._history.append(cmd)
-
     def setHistory(self, path):
         seencmnds = set()
         self._history.clear()
@@ -98,17 +78,14 @@ class Histrionic(object):
 
         start = self._page_offset * height
         end = (self._page_offset + 1) * height
-        i = 0
-
-        for cmd in self._history[start:end]:
+        for i, cmd in enumerate(self._history[start:end]):
             key = Text(self.keys[i])
             text = Text(cmd, no_wrap=True)
             if i + start == self._highlight:
                 key.stylize("bold red")
                 text.stylize("bold red")
             table.add_row(key, text)
-            i += 1
-
+        
         return table
 
     def mainLoop(self):
