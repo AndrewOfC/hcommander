@@ -3,7 +3,7 @@ use enigo::{Enigo, Keyboard, Settings};
 use rich_rs::{Column, Console, Row, Table, Text};
 use std::cmp::min;
 use std::collections::HashMap;
-use std::io::{Error, ErrorKind, Read, Write, stdin};
+use std::io::{Error, ErrorKind, Read, Write};
 use std::{io, process};
 use std::fs::File;
 
@@ -22,9 +22,14 @@ impl Drop for RawModeGuard {
 
 impl Histrionic {
     pub(crate) fn new(lines: Vec<String>) -> Self {
-
         let console = Console::new();
-        let enigo = match Enigo::new(&Settings::default()) {
+
+        let settings = Settings {
+            linux_delay: 100,
+            ..Settings::default()
+        } ;
+
+        let enigo = match Enigo::new(&settings) {
             Ok(enigo) => enigo,
             Err(_) => {
                 eprintln!("failed to initialize terminal");
@@ -33,7 +38,6 @@ impl Histrionic {
         } ;
 
         let height = min(console.height()-3, KEYS.len());
-
         Self {
             console,
             enigo,
@@ -56,14 +60,14 @@ impl Histrionic {
     }
 
     fn handle_page_down(&mut self, _: u8) -> bool {
-        if( (self.page_offset+1) * self.height < self.commands.len() ) {
+        if (self.page_offset+1) * self.height < self.commands.len()  {
             self.page_offset += 1;
         }
         true
     }
 
     fn handle_page_up(&mut self, _: u8) -> bool {
-        if( self.page_offset > 0) {
+        if self.page_offset > 0 {
             self.page_offset -= 1 ;
         }
         true
@@ -91,21 +95,13 @@ impl Histrionic {
     }
 
     fn send_text(&mut self, command: String, extracr:&str) -> io::Result<()> {
-        match self.enigo.text(command.as_str()) {
+
+        let command_string = format!("{}\r{}", command, extracr);
+        println!("Sending {}", command_string) ;
+        match self.enigo.text(command_string.as_str()) {
             Ok(_) => (),
             _ =>  return Err(Error::new(ErrorKind::Other, "sending text failed"))
         } ;
-
-        match self.enigo.text("\r") {
-            Ok(_) => (),
-            _ =>  return Err(Error::new(ErrorKind::Other, "sending text failed"))
-        } ;
-
-        match self.enigo.text(extracr) {
-            Ok(_) => (),
-            _ =>  return Err(Error::new(ErrorKind::Other, "sending text failed"))
-        } ;
-
 
         Ok(())
     }
@@ -123,7 +119,8 @@ impl Histrionic {
 
         let mut c : [u8;1] = [0] ;
         let mut tty = File::open("/dev/tty")?;
-        self.save_screen()? ;
+        let mut command_option : Option<String> = None ;
+        // self.save_screen()? ;
         loop {
             self.console.clear()? ;
             let table = self.render()? ;
@@ -163,11 +160,15 @@ impl Histrionic {
                 Some(i) => i,
                 None => continue,
             } ;
-            let command = self.commands[self.height * self.page_offset + key_index].clone();
-            self.send_text(command, "")?;
+            command_option = Some(self.commands[self.height * self.page_offset + key_index].clone());
             break ;
         }
-        self.restore_screen()? ;
+
+        if let Some(command) = command_option {
+            self.send_text(command, "")?;
+        }
+
+        //self.restore_screen()? ;
         Ok(())
     }
 }

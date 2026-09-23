@@ -6,11 +6,11 @@ use clap::Parser;
 use regex::Regex;
 use rich_rs::Console;
 use std::fs::File;
-use std::io::{BufRead, BufReader, Read, Write, stdin};
+use std::io::{BufRead, BufReader, stdin};
 use std::path::PathBuf;
 use std::process;
 
-use enigo::{Enigo, Keyboard};
+use enigo::Enigo;
 
 #[derive(Parser, Debug, Clone)]
 #[command(name = "hcommander", about = "Histrionic command selector")]
@@ -41,7 +41,7 @@ struct Histrionic {
 
 fn main() {
     let args = Args::parse();
-    write_pid_file() ;
+    let _ = write_pid_file() ;
     let reader : Box<dyn BufRead> = if let Some(path) = &args.file {
         let file = match File::open(path) {
             Ok(f) => f,
