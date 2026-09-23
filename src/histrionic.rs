@@ -1,4 +1,3 @@
-use crate::Histrionic;
 use enigo::{Enigo, Keyboard, Settings};
 use rich_rs::{Column, Console, Row, Table, Text};
 use std::cmp::min;
@@ -20,27 +19,20 @@ impl Drop for RawModeGuard {
     }
 }
 
+pub struct Histrionic {
+    console: Console,
+    commands: Vec<String>,
+    height : usize,
+    page_offset: usize,
+}
+
+
 impl Histrionic {
     pub(crate) fn new(lines: Vec<String>) -> Self {
         let console = Console::new();
-
-        let settings = Settings {
-            linux_delay: 100,
-            ..Settings::default()
-        } ;
-
-        let enigo = match Enigo::new(&settings) {
-            Ok(enigo) => enigo,
-            Err(_) => {
-                eprintln!("failed to initialize terminal");
-                process::exit(1);
-            }
-        } ;
-
         let height = min(console.height()-3, KEYS.len());
         Self {
             console,
-            enigo,
             commands: lines,
             page_offset: 0,
             height,
@@ -96,9 +88,16 @@ impl Histrionic {
 
     fn send_text(&mut self, command: String, extracr:&str) -> io::Result<()> {
 
+        let mut enigo = match Enigo::new(&Settings::default()) {
+            Ok(enigo) => enigo,
+            Err(_) => {
+                return Err(Error::new(ErrorKind::Other, "Could not initialize enigo"))
+            }
+        } ;
+
         let command_string = format!("{}\r{}", command, extracr);
         println!("Sending {}", command_string) ;
-        match self.enigo.text(command_string.as_str()) {
+        match enigo.text(command_string.as_str()) {
             Ok(_) => (),
             _ =>  return Err(Error::new(ErrorKind::Other, "sending text failed"))
         } ;

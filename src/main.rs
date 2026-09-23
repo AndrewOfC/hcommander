@@ -11,6 +11,7 @@ use std::path::PathBuf;
 use std::process;
 
 use enigo::Enigo;
+use crate::histrionic::Histrionic;
 
 #[derive(Parser, Debug, Clone)]
 #[command(name = "hcommander", about = "Histrionic command selector")]
@@ -31,13 +32,6 @@ where
     Args::try_parse_from(args)
 }
 
-struct Histrionic {
-    console: Console,
-    enigo: Enigo,
-    commands: Vec<String>,
-    height : usize,
-    page_offset: usize,
-}
 
 fn main() {
     let args = Args::parse();
