@@ -96,7 +96,6 @@ impl Histrionic {
         } ;
 
         let command_string = format!("{}\r{}", command, extracr);
-        println!("Sending {}", command_string) ;
         match enigo.text(command_string.as_str()) {
             Ok(_) => (),
             _ =>  return Err(Error::new(ErrorKind::Other, "sending text failed"))
