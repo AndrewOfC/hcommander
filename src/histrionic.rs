@@ -5,6 +5,7 @@ use std::cmp::min;
 use std::collections::HashMap;
 use std::io::{Error, ErrorKind, Read, Write, stdin};
 use std::{io, process};
+use std::fs::File;
 
 // q and Q deliberately omitted
 static KEYS: [&str;60] = [ "0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
@@ -23,7 +24,7 @@ impl Histrionic {
     pub(crate) fn new(lines: Vec<String>) -> Self {
 
         let console = Console::new();
-        let mut enigo = match Enigo::new(&Settings::default()) {
+        let enigo = match Enigo::new(&Settings::default()) {
             Ok(enigo) => enigo,
             Err(_) => {
                 eprintln!("failed to initialize terminal");
@@ -86,7 +87,6 @@ impl Histrionic {
             let row = Row::new(vec![Box::new(key), Box::new(text)]) ;
             table.add_row(row) ;
         }
-
         Ok(table)
     }
 
@@ -111,21 +111,18 @@ impl Histrionic {
     }
 
     pub(crate) fn main_loop(&mut self) -> io::Result<()> {
-        type EscapeHandler = fn(&mut Histrionic, u8) -> bool ;
+        type KeyHandler = fn(&mut Histrionic, u8) -> bool ;
 
-        /*
-        let mut escape_handlers : HashMap<u8, EscapeHandler> = HashMap::new() ;
-        escape_handlers.insert(b'6', Histrionic::handle_page_down);
-        */
-
-        let escape_handlers : HashMap<_,_> = [
-            (54, Histrionic::handle_page_down as EscapeHandler),
-            (53, Histrionic::handle_page_up),
-            (b'\x1b', |_, _| false)// break
+        let break_func = (|_, _| false) as KeyHandler;
+        let key_handlers: HashMap<_,_> = [
+            (0x36, Histrionic::handle_page_down as KeyHandler),
+            (0x35, Histrionic::handle_page_up),
+            (0x51, break_func), // Q
+            (0x71, break_func), // q
         ].into() ;
 
-
         let mut c : [u8;1] = [0] ;
+        let mut tty = File::open("/dev/tty")?;
         self.save_screen()? ;
         loop {
             self.console.clear()? ;
@@ -135,18 +132,26 @@ impl Histrionic {
             crossterm::terminal::enable_raw_mode()?;
             let _guard = RawModeGuard;
 
-             stdin().read(&mut c)? ;
+             tty.read(&mut c)? ;
              let s = String::from_utf8_lossy(&c).to_string() ;
              let c = c[0] ;
-             if c == b'q' || c == b'Q' {
-                 break ;
+
+             if key_handlers.contains_key(&c) {
+                 let f = match key_handlers.get(&c) {
+                     Some(handler) => handler,
+                     None => continue, // unknown char
+                 } ;
+                 if !f(self, c) {
+                     break ;
+                 }
              }
+
              if c == b'\x1b' {
                  let mut c : [u8;2] = [0;2] ;
-                 stdin().read(&mut c)? ;
+                 let _ = tty.read(&mut c)? ;
                  let c = c[1] ;
 
-                 let f = match escape_handlers.get(&c) {
+                 let f = match key_handlers.get(&c) {
                      Some(handler) => handler,
                      None => continue, // unknown char
                  } ;

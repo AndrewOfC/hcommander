@@ -53,3 +53,8 @@ pub fn read_in_commands<R: BufRead>(
 
     Ok(commands)
 }
+
+pub fn write_pid_file() -> io::Result<()> {
+    let pid = std::process::id();
+    std::fs::write("/run/hcommander.pid", pid.to_string())
+}

@@ -1,7 +1,7 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="Run" type="CargoCommandRunConfiguration" factoryName="Cargo Command">
+  <configuration default="false" name="Run" type="CargoCommandRunConfiguration" factoryName="Cargo Command" focusToolWindowBeforeRun="true">
     <option name="buildProfileId" value="dev" />
-    <option name="command" value="run --package hcommander --bin hcommander -- --file tmp.dat" />
+    <option name="command" value="run --package hcommander --bin hcommander" />
     <option name="workingDirectory" value="file://$PROJECT_DIR$" />
     <envs />
     <option name="emulateTerminal" value="true" />
@@ -11,7 +11,7 @@
     <option name="withSudo" value="false" />
     <option name="buildTarget" value="REMOTE" />
     <option name="backtrace" value="SHORT" />
-    <option name="isRedirectInput" value="false" />
+    <option name="isRedirectInput" value="true" />
     <option name="redirectInputPath" value="data/sample1.txt" />
     <method v="2">
       <option name="CARGO.BUILD_TASK_PROVIDER" enabled="true" />

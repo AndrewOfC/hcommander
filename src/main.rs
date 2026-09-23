@@ -1,7 +1,7 @@
 mod fileops;
 mod histrionic;
 
-use crate::fileops::read_in_commands;
+use crate::fileops::{read_in_commands, write_pid_file};
 use clap::Parser;
 use regex::Regex;
 use rich_rs::Console;
@@ -41,19 +41,18 @@ struct Histrionic {
 
 fn main() {
     let args = Args::parse();
-
-    let reader: Box<dyn BufRead> = match &args.file {
-        Some(path) => {
-            let file = match File::open(path) {
-                Ok(f) => f,
-                Err(err) => {
-                    eprintln!("Error opening file '{}': {}", path.display(), err);
-                    process::exit(1);
-                }
-            };
-            Box::new(BufReader::new(file))
-        }
-        None => Box::new(stdin().lock()),
+    write_pid_file() ;
+    let reader : Box<dyn BufRead> = if let Some(path) = &args.file {
+        let file = match File::open(path) {
+            Ok(f) => f,
+            Err(err) => {
+                eprintln!("Error opening file '{}': {}", path.display(), err);
+                process::exit(1);
+            }
+        };
+        Box::new(BufReader::new(file))
+    } else {
+        Box::new(BufReader::new(stdin().lock()))
     };
 
     let lines = match read_in_commands(reader, args.regex.as_ref()) {
