@@ -1,17 +1,22 @@
 
 
 
-use std::fs::File;
 use std::io::{self, BufReader};
 use std::path::PathBuf;
-use regex::Regex;
 
 #[path = "../src/main.rs"]
 mod main;
-use main::{parse_args, run};
+use main::{parse_args};
+
+#[path = "../src/read_in_commands.rs"]
+mod read_in_commands ;
+use read_in_commands::read_in_commands;
 
 #[cfg(test)]
 mod tests {
+    use std::io::{Cursor, Error, Seek, SeekFrom, Write};
+    use std::num::ParseIntError;
+    use regex::Regex;
     use super::*;
 
     #[test]
@@ -70,35 +75,65 @@ mod tests {
         assert!(res.is_err());
     }
 
-    #[test]
-    fn test_filter_and_reverse_no_regex() {
-        let input = "first\nsecond\nthird\n";
-        let lines = run(io::Cursor::new(input), None).unwrap();
-        assert_eq!(lines, vec!["third", "second", "first"]);
+
+    const sample : &[u8] = br#"        1 6 ls a
+    2 5 ls b
+    1 4 ls a
+    3 3 ls c
+    4 2 git 1
+    5 1 git a
+    6 a
+"# ;
+
+    fn gen_sample() -> io::Result<Cursor<Vec<u8>>>  {
+        let mut memfile = Cursor::new(Vec::<u8>::new());
+        memfile.write_all(sample)? ;
+
+        memfile.seek(SeekFrom::Start(0))?;
+        Ok(memfile)
+    }
+
+    fn intparse(s: &str) -> io::Result<usize> {
+        match s.parse::<usize>() {
+            Ok(i) => { Ok(i) },
+            Err(_) => { return Err(Error::other("failed to parse")) }
+        }
     }
 
     #[test]
-    fn test_filter_and_reverse_with_regex() {
-        let input = "apple\nbanana\napricot\ncherry\n";
-        let regex = Regex::new(r"^a").unwrap();
-        let lines = run(io::Cursor::new(input), Some(&regex)).unwrap();
-        assert_eq!(lines, vec!["apricot", "apple"]);
+    fn test_reading_commands() -> io::Result<()> {
+        let mut memfile = gen_sample()?;
+
+        let commands = read_in_commands(memfile, None)?;
+        assert_eq!(commands.len(), 6);
+
+        for (i, command) in commands.iter().enumerate() {
+            let s2 = &command[0..1] ;
+            let j = intparse(s2)? ;
+            assert_eq!(j, i+1) ;
+        } // for
+
+        Ok(())
     }
 
     #[test]
-    fn test_filter_and_reverse_empty_input() {
-        let input = "";
-        let lines = run(io::Cursor::new(input), None).unwrap();
-        assert_eq!(lines, Vec::<String>::new());
-    }
+    fn test_reading_command_w_filter() -> io::Result<()> {
+        let mut memfile = gen_sample()?;
 
-    #[test]
-    fn test_run_from_sample_file() {
-        let file = File::open("data/sample1.txt").unwrap();
-        let lines = run(BufReader::new(file), None).unwrap();
-        assert_eq!(
-            lines,
-            vec!["pushd", "popd", "pwd", "ls", "command 2", "command 1"]
-        );
+        let r = match Regex::new("git") {
+            Ok(r) => r,
+            Err(_) => { return Err(Error::other("failed to parse")) }
+        } ;
+        let commands = read_in_commands(memfile, Some(&r))?;
+        assert_eq!(commands.len(), 2);
+
+        for (i, command) in commands.iter().enumerate() {
+            let s2 = &command[0..1] ;
+            let j = intparse(s2)? ;
+            assert_eq!(j, i+1) ;
+        } // for
+
+        Ok(())
+
     }
 }
