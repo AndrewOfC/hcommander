@@ -3,8 +3,9 @@ use rich_rs::{Column, Console, Row, Table, Text};
 use std::cmp::min;
 use std::collections::HashMap;
 use std::io::{Error, ErrorKind, Read, Write};
-use std::{io, process};
+use std::{io, process, thread};
 use std::fs::File;
+use std::time::Duration;
 
 // q and Q deliberately omitted
 static KEYS: [&str;60] = [ "0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
@@ -87,7 +88,7 @@ impl Histrionic {
     }
 
     fn send_text(&mut self, command: String, extracr:&str) -> io::Result<()> {
-
+        thread::sleep(Duration::from_millis(100)); // delay so the key release event doesn't 'eat' our output
         let mut enigo = match Enigo::new(&Settings::default()) {
             Ok(enigo) => enigo,
             Err(_) => {
