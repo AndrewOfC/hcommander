@@ -1,9 +1,32 @@
+// MIT License
+//
+// Copyright (c) 2026 Andrew Ellis Page
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+//
+// SPDX short identifier: MIT
 use enigo::{Enigo, Keyboard, Settings};
 use rich_rs::{Column, Console, Row, Table, Text};
 use std::cmp::min;
 use std::collections::HashMap;
-use std::io::{Error, ErrorKind, Read, Write};
-use std::{io, process, thread};
+use std::io::{Error, Read, Write};
+use std::{io, thread};
 use std::fs::File;
 use std::time::Duration;
 
@@ -92,14 +115,14 @@ impl Histrionic {
         let mut enigo = match Enigo::new(&Settings::default()) {
             Ok(enigo) => enigo,
             Err(_) => {
-                return Err(Error::new(ErrorKind::Other, "Could not initialize enigo"))
+                return Err(Error::other("Could not initialize enigo"))
             }
         } ;
 
         let command_string = format!("{}\r{}", command, extracr);
         match enigo.text(command_string.as_str()) {
             Ok(_) => (),
-            _ =>  return Err(Error::new(ErrorKind::Other, "sending text failed"))
+            _ =>  return Err(Error::other("sending text failed"))
         } ;
 
         Ok(())
@@ -119,7 +142,7 @@ impl Histrionic {
         let mut c : [u8;1] = [0] ;
         let mut tty = File::open("/dev/tty")?;
         let mut command_option : Option<String> = None ;
-        // self.save_screen()? ;
+        self.save_screen()? ;
         loop {
             self.console.clear()? ;
             let table = self.render()? ;
@@ -128,7 +151,7 @@ impl Histrionic {
             crossterm::terminal::enable_raw_mode()?;
             let _guard = RawModeGuard;
 
-             tty.read(&mut c)? ;
+             tty.read_exact(&mut c)? ;
              let s = String::from_utf8_lossy(&c).to_string() ;
              let c = c[0] ;
 
@@ -167,7 +190,7 @@ impl Histrionic {
             self.send_text(command, "")?;
         }
 
-        //self.restore_screen()? ;
+        self.restore_screen()? ;
         Ok(())
     }
 }
