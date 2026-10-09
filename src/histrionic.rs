@@ -111,11 +111,11 @@ impl Histrionic {
     }
 
     fn send_text(&mut self, command: String, extracr:&str) -> io::Result<()> {
-        thread::sleep(Duration::from_millis(100)); // delay so the key release event doesn't 'eat' our output
+        thread::sleep(Duration::from_millis(150)); // delay so the key release event doesn't 'eat' our output
         let mut enigo = match Enigo::new(&Settings::default()) {
             Ok(enigo) => enigo,
-            Err(_) => {
-                return Err(Error::other("Could not initialize enigo"))
+            Err(e) => {
+                return Err(Error::other(format!("Could not initialize enigo: {e}")))
             }
         } ;
 
