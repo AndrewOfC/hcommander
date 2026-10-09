@@ -33,6 +33,7 @@ crossterm = "0.28"
 enigo = "0.6.1"
 regex = "1.13.1"
 rich-rs = "1.3.0"
+nix = { version = "0.31.3", features = ["ioctl"] }
 [[bin]]
 name = "hcommander"
 path = "src/main.rs"

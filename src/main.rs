@@ -23,6 +23,9 @@
 // SPDX short identifier: MIT
 mod read_in_commands;
 mod histrionic;
+mod textsender;
+mod enigo_sender;
+mod tty_sender;
 
 use read_in_commands::read_in_commands;
 use clap::Parser;
@@ -33,6 +36,9 @@ use std::path::PathBuf;
 use std::process;
 
 use histrionic::Histrionic;
+use crate::enigo_sender::EnigoSender;
+use crate::textsender::TextSender;
+use crate::tty_sender::TTYSender;
 
 #[derive(Parser, Debug, Clone)]
 #[command(name = "hcommander", about = "Histrionic command selector")]
@@ -44,6 +50,8 @@ pub struct Args {
     /// Show version
     #[arg(short, long)]
     pub version: bool,
+    #[arg(short, long)]
+    pub tty: bool,
 
 
     /// Regular expression filter
@@ -59,7 +67,7 @@ where
 }
 
 
-fn main() {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
 
     if args.version {
@@ -95,7 +103,15 @@ fn main() {
 
     match histrionic.main_loop() {
         Err(err) => {println!("Error: {}", err); process::exit(1);},
-        Ok(_) => {process::exit(0)}
+        Ok(result) => {
+            match result {
+                None => {process::exit(0)},
+                Some(command) => {
+                    let sender = TTYSender{};
+                    Ok(sender.send_text(command, "")?)
+                }
+            }
+        }
     }
 
 }

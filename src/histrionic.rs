@@ -21,14 +21,13 @@
 // SOFTWARE.
 //
 // SPDX short identifier: MIT
-use enigo::{Enigo, Keyboard, Settings};
 use rich_rs::{Column, Console, Row, Table, Text};
 use std::cmp::min;
 use std::collections::HashMap;
-use std::io::{Error, Read, Write};
-use std::{io, thread};
 use std::fs::File;
+use std::io::{Error, Read, Write};
 use std::time::Duration;
+use std::{io, thread};
 
 // q and Q deliberately omitted
 static KEYS: [&str;60] = [ "0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
@@ -110,25 +109,7 @@ impl Histrionic {
         Ok(table)
     }
 
-    fn send_text(&mut self, command: String, extracr:&str) -> io::Result<()> {
-        thread::sleep(Duration::from_millis(150)); // delay so the key release event doesn't 'eat' our output
-        let mut enigo = match Enigo::new(&Settings::default()) {
-            Ok(enigo) => enigo,
-            Err(e) => {
-                return Err(Error::other(format!("Could not initialize enigo: {e}")))
-            }
-        } ;
-
-        let command_string = format!("{}\r{}", command, extracr);
-        match enigo.text(command_string.as_str()) {
-            Ok(_) => (),
-            _ =>  return Err(Error::other("sending text failed"))
-        } ;
-
-        Ok(())
-    }
-
-    pub(crate) fn main_loop(&mut self) -> io::Result<()> {
+    pub(crate) fn main_loop(&mut self) -> io::Result<(Option<String>)> {
         type KeyHandler = fn(&mut Histrionic, u8) -> bool ;
 
         let break_func = (|_, _| false) as KeyHandler;
@@ -139,9 +120,9 @@ impl Histrionic {
             (0x71, break_func), // q
         ].into() ;
 
+        let mut result : Option<String> = None ;
         let mut c : [u8;1] = [0] ;
         let mut tty = File::open("/dev/tty")?;
-        let mut command_option : Option<String> = None ;
         self.save_screen()? ;
         loop {
             self.console.clear()? ;
@@ -182,15 +163,11 @@ impl Histrionic {
                 Some(i) => i,
                 None => continue,
             } ;
-            command_option = Some(self.commands[self.height * self.page_offset + key_index].clone());
+            result = Some(self.commands[self.height * self.page_offset + key_index].clone());
             break ;
         }
 
-        if let Some(command) = command_option {
-            self.send_text(command, "")?;
-        }
-
         self.restore_screen()? ;
-        Ok(())
+        Ok(result)
     }
 }
